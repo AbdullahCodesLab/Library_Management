@@ -9,6 +9,7 @@ from typing import Optional, List
 class UserBase(BaseModel):
     name: str
     email: EmailStr
+    phone_number: str
 
 
 class UserCreate(UserBase):
@@ -18,6 +19,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
+    phone_number: Optional[str] = None
 
 
 class UserResponse(UserBase):
@@ -106,4 +108,5 @@ class UserProfileResponse(BaseModel):
     id: int
     name: str
     email: EmailStr
+    phone_number: str
     issued_books: List[UserIssuedBookInfo]

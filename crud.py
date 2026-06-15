@@ -6,7 +6,6 @@ import models
 import schemas
 
 
-
 # User CRUD
 
 
@@ -20,7 +19,8 @@ async def get_user_by_email(db: AsyncSession, email: str):
 async def create_user(db: AsyncSession, user: schemas.UserCreate):
     db_user = models.User(
         name=user.name,
-        email=user.email
+        email=user.email,
+        phone_number=user.phone_number
     )
 
     db.add(db_user)
@@ -53,6 +53,9 @@ async def update_user(db: AsyncSession, user_id: int, user_data: schemas.UserUpd
 
     if user_data.email is not None:
         user.email = user_data.email
+
+    if user_data.phone_number is not None:
+        user.phone_number = user_data.phone_number
 
     await db.commit()
     await db.refresh(user)
@@ -146,6 +149,7 @@ async def update_book(db: AsyncSession, book_id: int, book_data: schemas.BookUpd
 
     return book
 
+
 # Issue Book CRUD
 
 
@@ -209,10 +213,12 @@ async def get_all_issued_books(db: AsyncSession):
 
 async def get_user_issued_books(db: AsyncSession, user_id: int):
     result = await db.execute(
-        select(models.IssuedBook).where(models.IssuedBook.books_user_id == user_id)
+        select(models.IssuedBook).where(
+            models.IssuedBook.books_user_id == user_id
+        )
     )
-    return result.scalars().all()
 
+    return result.scalars().all()
 
 
 # User Profile
@@ -226,9 +232,17 @@ async def get_user_profile(db: AsyncSession, user_id: int):
 
     result = await db.execute(
         select(models.IssuedBook, models.Book, models.Category)
-        .join(models.Book, models.IssuedBook.issued_book_id == models.Book.id)
-        .join(models.Category, models.Book.category_id == models.Category.id)
-        .where(models.IssuedBook.books_user_id == user_id)
+        .join(
+            models.Book,
+            models.IssuedBook.issued_book_id == models.Book.id
+        )
+        .join(
+            models.Category,
+            models.Book.category_id == models.Category.id
+        )
+        .where(
+            models.IssuedBook.books_user_id == user_id
+        )
     )
 
     records = result.all()
@@ -236,20 +250,28 @@ async def get_user_profile(db: AsyncSession, user_id: int):
     issued_books_list = []
 
     for issued_record, book, category in records:
-        status = "returned" if issued_record.returned_time else "currently issued"
 
-        issued_books_list.append({
-            "book_id": book.id,
-            "book_name": book.name,
-            "category_name": category.name,
-            "issued_time": issued_record.issued_time,
-            "returned_time": issued_record.returned_time,
-            "status": status
-        })
+        status = (
+            "returned"
+            if issued_record.returned_time
+            else "currently issued"
+        )
+
+        issued_books_list.append(
+            {
+                "book_id": book.id,
+                "book_name": book.name,
+                "category_name": category.name,
+                "issued_time": issued_record.issued_time,
+                "returned_time": issued_record.returned_time,
+                "status": status
+            }
+        )
 
     return {
         "id": user.id,
         "name": user.name,
         "email": user.email,
+        "phone_number": user.phone_number,
         "issued_books": issued_books_list
     }
