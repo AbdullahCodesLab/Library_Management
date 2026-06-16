@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
 
+#   users
 
 class User(Base):
     __tablename__ = "users"
@@ -29,12 +30,17 @@ class User(Base):
         unique=True,
         nullable=False
     )
+    
+    password: Mapped[str] = mapped_column(
+    String,
+    nullable=False
+    )
 
     issued_books: Mapped[List["IssuedBook"]] = relationship(
         back_populates="user"
     )
 
-
+#   categories
 class Category(Base):
     __tablename__ = "categories"
 
@@ -51,7 +57,7 @@ class Category(Base):
         back_populates="category"
     )
 
-
+#   books
 class Book(Base):
     __tablename__ = "books"
 
@@ -80,7 +86,7 @@ class Book(Base):
         back_populates="book"
     )
 
-
+    #issued_books 
 class IssuedBook(Base):
     __tablename__ = "issued_books"
 

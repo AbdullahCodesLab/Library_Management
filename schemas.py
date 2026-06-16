@@ -5,7 +5,6 @@ from typing import Optional, List
 
 # User Schemas
 
-
 class UserBase(BaseModel):
     name: str
     email: EmailStr
@@ -13,7 +12,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    pass
+    password: str
 
 
 class UserUpdate(BaseModel):
@@ -28,6 +27,12 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
+
+# JWT Schemas
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 
 # Category Schemas
@@ -47,9 +52,7 @@ class CategoryResponse(CategoryBase):
         from_attributes = True
 
 
-
 # Book Schemas
-
 
 class BookBase(BaseModel):
     name: str
@@ -78,8 +81,8 @@ class BookResponse(BaseModel):
 # Issued Book Schemas
 
 class IssueBookCreate(BaseModel):
+
     issued_book_id: int
-    books_user_id: int
 
 
 class IssuedBookResponse(BaseModel):
