@@ -1,8 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy.future import select
+
 from datetime import datetime
 
 import models
+
 import schemas
 
 from auth import (
@@ -18,6 +21,7 @@ async def get_user_by_email(
     db: AsyncSession,
     email: str
 ):
+
     result = await db.execute(
         select(models.User).where(
             models.User.email == email
@@ -39,12 +43,14 @@ async def authenticate_user(
     )
 
     if not user:
+
         return None
 
     if not verify_password(
         password,
         user.password
     ):
+
         return None
 
     return user
@@ -60,17 +66,27 @@ async def create_user(
     )
 
     db_user = models.User(
+
         name=user.name,
+
         email=user.email,
+
         phone_number=user.phone_number,
-        password=hashed_password
+
+        password=hashed_password,
+
+        role=user.role
     )
 
-    db.add(db_user)
+    db.add(
+        db_user
+    )
 
     await db.commit()
 
-    await db.refresh(db_user)
+    await db.refresh(
+        db_user
+    )
 
     return db_user
 
@@ -112,6 +128,7 @@ async def update_user(
     )
 
     if not user:
+
         return None
 
     if user_data.name is not None:
@@ -126,6 +143,10 @@ async def update_user(
 
         user.phone_number = user_data.phone_number
 
+    if user_data.role is not None:
+
+        user.role = user_data.role
+
     await db.commit()
 
     await db.refresh(
@@ -133,6 +154,29 @@ async def update_user(
     )
 
     return user
+
+
+async def delete_user(
+    db: AsyncSession,
+    user_id: int
+):
+
+    user = await get_user_by_id(
+        db,
+        user_id
+    )
+
+    if not user:
+
+        return None
+
+    await db.delete(
+        user
+    )
+
+    await db.commit()
+
+    return True
 
 
 # Category CRUD
@@ -144,7 +188,9 @@ async def get_category_by_name(
 ):
 
     result = await db.execute(
+
         select(models.Category).where(
+
             models.Category.name == name
         )
     )
@@ -158,6 +204,7 @@ async def create_category(
 ):
 
     db_category = models.Category(
+
         name=category.name
     )
 
@@ -179,6 +226,7 @@ async def get_all_categories(
 ):
 
     result = await db.execute(
+
         select(models.Category)
     )
 
@@ -191,7 +239,9 @@ async def get_category_by_id(
 ):
 
     result = await db.execute(
+
         select(models.Category).where(
+
             models.Category.id == category_id
         )
     )
@@ -208,8 +258,14 @@ async def create_book(
 ):
 
     db_book = models.Book(
+
         name=book.name,
-        category_id=book.category_id
+
+        category_id=book.category_id,
+
+        total_copies=book.total_copies,
+
+        available_copies=book.available_copies
     )
 
     db.add(
@@ -226,11 +282,21 @@ async def create_book(
 
 
 async def get_all_books(
-    db: AsyncSession
+
+    db: AsyncSession,
+
+    skip: int = 0,
+
+    limit: int = 5
 ):
 
     result = await db.execute(
+
         select(models.Book)
+
+        .offset(skip)
+
+        .limit(limit)
     )
 
     return result.scalars().all()
@@ -242,26 +308,14 @@ async def get_book_by_id(
 ):
 
     result = await db.execute(
+
         select(models.Book).where(
+
             models.Book.id == book_id
         )
     )
 
     return result.scalar_one_or_none()
-
-
-async def get_books_by_category(
-    db: AsyncSession,
-    category_id: int
-):
-
-    result = await db.execute(
-        select(models.Book).where(
-            models.Book.category_id == category_id
-        )
-    )
-
-    return result.scalars().all()
 
 
 async def update_book(
@@ -276,6 +330,7 @@ async def update_book(
     )
 
     if not book:
+
         return None
 
     if book_data.name is not None:
@@ -286,6 +341,14 @@ async def update_book(
 
         book.category_id = book_data.category_id
 
+    if book_data.total_copies is not None:
+
+        book.total_copies = book_data.total_copies
+
+    if book_data.available_copies is not None:
+
+        book.available_copies = book_data.available_copies
+
     await db.commit()
 
     await db.refresh(
@@ -295,13 +358,130 @@ async def update_book(
     return book
 
 
-# Issue Book CRUD
+async def delete_book(
+    db: AsyncSession,
+    book_id: int
+):
+
+    book = await get_book_by_id(
+        db,
+        book_id
+    )
+
+    if not book:
+
+        return None
+
+    await db.delete(
+        book
+    )
+
+    await db.commit()
+
+    return True
+
+
+# Waitlist
+
+
+async def join_waitlist(
+    db: AsyncSession,
+    book_id: int,
+    current_user
+):
+
+    book = await get_book_by_id(
+        db,
+        book_id
+    )
+
+    if not book:
+
+        return "book_not_found"
+
+    if book.available_copies > 0:
+
+        return "book_available"
+
+    if current_user.role != "user":
+
+        return "only_user_allowed"
+
+    existing = await db.execute(
+
+        select(models.Waitlist).where(
+
+            models.Waitlist.book_id == book_id,
+
+            models.Waitlist.user_id == current_user.id
+        )
+    )
+
+    existing = existing.scalar_one_or_none()
+
+    if existing:
+
+        return "already_joined"
+
+    waitlist = models.Waitlist(
+
+        user_id=current_user.id,
+
+        book_id=book_id
+    )
+
+    db.add(
+        waitlist
+    )
+
+    await db.commit()
+
+    await db.refresh(
+        waitlist
+    )
+
+    return waitlist
+
+
+async def get_book_waitlist(
+    db: AsyncSession,
+    book_id: int
+):
+
+    book = await get_book_by_id(
+        db,
+        book_id
+    )
+
+    if not book:
+
+        return "book_not_found"
+
+    result = await db.execute(
+
+        select(models.Waitlist)
+
+        .where(
+
+            models.Waitlist.book_id
+            == book_id
+        )
+
+        .order_by(
+
+            models.Waitlist.created_at
+        )
+    )
+
+    return result.scalars().all()
+
+
+# Issue Book
 
 
 async def issue_book(
     db: AsyncSession,
-    issue_data: schemas.IssueBookCreate,
-    current_user
+    issue_data: schemas.IssueBookCreate
 ):
 
     book = await get_book_by_id(
@@ -313,18 +493,51 @@ async def issue_book(
 
         return "book_not_found"
 
-    if book.is_issued:
+    user = await get_user_by_id(
+        db,
+        issue_data.user_id
+    )
+
+    if not user:
+
+        return "user_not_found"
+
+    if user.role != "user":
+
+        return "invalid_user"
+
+    existing_issue = await db.execute(
+
+        select(models.IssuedBook).where(
+
+            models.IssuedBook.issued_book_id
+            == issue_data.issued_book_id,
+
+            models.IssuedBook.books_user_id
+            == issue_data.user_id,
+
+            models.IssuedBook.returned_time.is_(None)
+        )
+    )
+
+    existing_issue = existing_issue.scalar_one_or_none()
+
+    if existing_issue:
 
         return "book_already_issued"
+
+    if book.available_copies <= 0:
+
+        return "no_copy_available"
 
     issued_record = models.IssuedBook(
 
         issued_book_id=issue_data.issued_book_id,
 
-        books_user_id=current_user.id
+        books_user_id=issue_data.user_id
     )
 
-    book.is_issued = True
+    book.available_copies -= 1
 
     db.add(
         issued_record
@@ -338,21 +551,24 @@ async def issue_book(
 
     return issued_record
 
-
 # Return Book
 
 
 async def return_book(
     db: AsyncSession,
-    issued_book_id: int,
+    book_id: int,
     current_user
 ):
 
     result = await db.execute(
 
-        select(models.IssuedBook).where(
+        select(models.IssuedBook)
 
-            models.IssuedBook.id == issued_book_id,
+        .where(
+
+            models.IssuedBook.issued_book_id == book_id,
+
+            models.IssuedBook.books_user_id == current_user.id,
 
             models.IssuedBook.returned_time.is_(None)
         )
@@ -364,20 +580,54 @@ async def return_book(
 
         return "issued_record_not_found"
 
-    if issued_record.books_user_id != current_user.id:
-
-        return "not_your_book"
-
     book = await get_book_by_id(
+
         db,
-        issued_record.issued_book_id
+
+        book_id
     )
 
     issued_record.returned_time = datetime.utcnow()
 
     if book:
 
-        book.is_issued = False
+        waitlist_result = await db.execute(
+
+            select(models.Waitlist)
+
+            .where(
+
+                models.Waitlist.book_id == book.id
+            )
+
+            .order_by(
+
+                models.Waitlist.created_at
+            )
+        )
+
+        next_user = waitlist_result.scalars().first()
+
+        if next_user:
+
+            auto_issue = models.IssuedBook(
+
+                issued_book_id=book.id,
+
+                books_user_id=next_user.user_id
+            )
+
+            db.add(
+                auto_issue
+            )
+
+            await db.delete(
+                next_user
+            )
+
+        else:
+
+            book.available_copies += 1
 
     await db.commit()
 
@@ -393,6 +643,7 @@ async def get_all_issued_books(
 ):
 
     result = await db.execute(
+
         select(models.IssuedBook)
     )
 
@@ -408,7 +659,8 @@ async def get_user_issued_books(
 
         select(models.IssuedBook).where(
 
-            models.IssuedBook.books_user_id == user_id
+            models.IssuedBook.books_user_id
+            == user_id
         )
     )
 
@@ -478,6 +730,7 @@ async def get_user_profile(
         issued_books_list.append(
 
             {
+
                 "book_id": book.id,
 
                 "book_name": book.name,
@@ -501,6 +754,8 @@ async def get_user_profile(
         "email": user.email,
 
         "phone_number": user.phone_number,
+
+        "role": user.role,
 
         "issued_books": issued_books_list
     }
