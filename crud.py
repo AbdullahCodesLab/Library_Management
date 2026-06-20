@@ -92,11 +92,23 @@ async def create_user(
 
 
 async def get_all_users(
-    db: AsyncSession
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 5
 ):
 
     result = await db.execute(
+
         select(models.User)
+
+        .order_by(
+
+            models.User.id
+        )
+
+        .offset(skip)
+
+        .limit(limit)
     )
 
     return result.scalars().all()
@@ -222,12 +234,23 @@ async def create_category(
 
 
 async def get_all_categories(
-    db: AsyncSession
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 5
 ):
 
     result = await db.execute(
 
         select(models.Category)
+
+        .order_by(
+
+            models.Category.id
+        )
+
+        .offset(skip)
+
+        .limit(limit)
     )
 
     return result.scalars().all()
@@ -281,6 +304,7 @@ async def create_book(
     return db_book
 
 
+
 async def get_all_books(
 
     db: AsyncSession,
@@ -293,6 +317,11 @@ async def get_all_books(
     result = await db.execute(
 
         select(models.Book)
+
+        .order_by(
+
+            models.Book.id
+        )
 
         .offset(skip)
 
@@ -445,7 +474,9 @@ async def join_waitlist(
 
 async def get_book_waitlist(
     db: AsyncSession,
-    book_id: int
+    book_id: int,
+    skip: int = 0,
+    limit: int = 5
 ):
 
     book = await get_book_by_id(
@@ -471,6 +502,10 @@ async def get_book_waitlist(
 
             models.Waitlist.created_at
         )
+
+        .offset(skip)
+
+        .limit(limit)
     )
 
     return result.scalars().all()
@@ -638,13 +673,30 @@ async def return_book(
     return issued_record
 
 
+# Issued Books
+
+
+# Issued Books
+
+
 async def get_all_issued_books(
-    db: AsyncSession
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 5
 ):
 
     result = await db.execute(
 
         select(models.IssuedBook)
+
+        .order_by(
+
+            models.IssuedBook.id
+        )
+
+        .offset(skip)
+
+        .limit(limit)
     )
 
     return result.scalars().all()

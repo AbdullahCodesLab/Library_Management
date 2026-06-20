@@ -158,11 +158,16 @@ async def create_user(
     )
 
 
+
 @router.get(
     "/users/",
     response_model=List[schemas.UserResponse]
 )
 async def get_users(
+
+    skip: int = 0,
+
+    limit: int = 5,
 
     db: AsyncSession = Depends(get_db),
 
@@ -175,7 +180,12 @@ async def get_users(
     )
 
     return await crud.get_all_users(
-        db
+
+        db,
+
+        skip,
+
+        limit
     )
 
 
@@ -394,6 +404,10 @@ async def create_category(
 )
 async def get_categories(
 
+    skip: int = 0,
+
+    limit: int = 5,
+
     db: AsyncSession = Depends(get_db),
 
     current_user=Depends(get_current_user)
@@ -401,7 +415,12 @@ async def get_categories(
 ):
 
     return await crud.get_all_categories(
-        db
+
+        db,
+
+        skip,
+
+        limit
     )
 
 # Books
@@ -729,6 +748,10 @@ async def get_book_waitlist(
 
     book_id: int,
 
+    skip: int = 0,
+
+    limit: int = 5,
+
     db: AsyncSession = Depends(get_db),
 
     current_user=Depends(get_current_user)
@@ -739,7 +762,11 @@ async def get_book_waitlist(
 
         db,
 
-        book_id
+        book_id,
+
+        skip,
+
+        limit
     )
 
     if result == "book_not_found":
@@ -794,12 +821,15 @@ async def return_book(
 
 # Issued Books
 
-
 @router.get(
     "/issued-books/",
     response_model=List[schemas.IssuedBookResponse]
 )
 async def get_issued_books(
+
+    skip: int = 0,
+
+    limit: int = 5,
 
     db: AsyncSession = Depends(get_db),
 
@@ -812,7 +842,12 @@ async def get_issued_books(
     )
 
     return await crud.get_all_issued_books(
-        db
+
+        db,
+
+        skip,
+
+        limit
     )
 
 
